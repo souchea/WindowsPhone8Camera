@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
+using Windows.Devices.Enumeration;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
+using Windows.Media.Capture;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Controls.Primitives;
@@ -27,6 +29,42 @@ namespace Wp81Camera
             this.InitializeComponent();
 
             this.NavigationCacheMode = NavigationCacheMode.Required;
+            StartWebCam();
+        }
+
+        public async void StartWebCam()
+        {
+            // First need to find all webcams
+            DeviceInformationCollection webcamList = await DeviceInformation.FindAllAsync(DeviceClass.VideoCapture);
+
+            // Then I do a query to find the front webcam
+            DeviceInformation frontWebcam = (from webcam in webcamList
+             where webcam.EnclosureLocation != null 
+             && webcam.EnclosureLocation.Panel == Windows.Devices.Enumeration.Panel.Front
+             select webcam).FirstOrDefault();
+
+            // Same for the back webcam
+            DeviceInformation backWebcam = (from webcam in webcamList
+             where webcam.EnclosureLocation != null 
+             && webcam.EnclosureLocation.Panel == Windows.Devices.Enumeration.Panel.Back
+             select webcam).FirstOrDefault();
+
+            // Then you need to initialize your MediaCapture
+            var newCapture  = new MediaCapture();
+            await newCapture.InitializeAsync(new MediaCaptureInitializationSettings
+            {
+                // Choose the webcam you want (backWebcam or frontWebcam)
+                VideoDeviceId = backWebcam.Id,
+                AudioDeviceId = "",
+                StreamingCaptureMode = StreamingCaptureMode.Video,
+                PhotoCaptureSource = PhotoCaptureSource.VideoPreview
+            });
+
+            // Set the source of the CaptureElement to your MediaCapture
+            Capture.Source = newCapture;
+
+            // Start the preview
+            await newCapture.StartPreviewAsync();
         }
 
         /// <summary>
